@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.records.dao.RecordsDao">
+    
+	<sql id="recordsColumns">
+		a.id AS "id",
+		a.fee_type AS "feeSet.feeType",
+		a.apply_date AS "applyDate",
+		a.back_date AS "backDate",
+		a.request_hospital AS "requestHospital.hospitalNo",
+		a.request_professor_name AS "requestProfessorName",
+		a.response_hospital AS "responseHospital.hospitalNo",
+		a.response_professor_name AS "responseProfessorName",
+		a.treatment_no AS "treatmentNo",
+		a.patient_no AS "patientNo",
+		a.patient_name AS "patientName",
+		a.sex AS "sex",
+		a.patient_age AS "patientAge",
+		a.check_content AS "checkContent",
+		a.advice AS "advice",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag",		
+		reqh.hospital_name AS "requestHospital.hospitalName",
+		resph.hospital_name AS "responseHospital.hospitalName",
+		reqh.id AS "requestHospital.id",
+		resph.id AS "responseHospital.id",
+		fs.hospital_fee AS "feeSet.hospitalFee",
+		fs.scale AS "feeSet.scale"
+	</sql>
+	<sql id="myColumns">		
+		date_format(a.back_date,'%Y-%m-%d') rdate,
+		a.fee_type,
+        COUNT(a.fee_type) count
+	</sql>
+	
+	<sql id="recordsJoins">
+		LEFT JOIN hospital reqh ON reqh.hospital_no = a.request_hospital
+		LEFT JOIN hospital resph ON resph.hospital_no = a.response_hospital
+		LEFT JOIN fee_set fs ON resph.id = fs.hospital_id AND a.fee_type = fs.fee_type
+	</sql>
+    
+	<select id="get" resultType="Records">
+		SELECT 
+			<include refid="recordsColumns"/>
+		FROM records a
+		<include refid="recordsJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="Records">
+		SELECT 
+			<include refid="recordsColumns"/>
+		FROM records a
+		<include refid="recordsJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="requestHospital != null and requestHospital.id != null and requestHospital.id != ''">
+				<if test='moneyInOut == "0"'> 
+					AND (reqh.id = #{requestHospital.id} OR resph.id = #{requestHospital.id})
+				</if> 			
+				<!-- 收入 -->
+				<if test='moneyInOut == "1"'>
+					AND resph.id = #{requestHospital.id}
+				</if>
+				<!-- 支出 -->
+				<if test='moneyInOut == "2"'>
+					AND reqh.id = #{requestHospital.id}
+				</if>
+			</if>
+			<if test="feeSet != null and feeSet.feeType != null and feeSet.feeType != ''">
+				AND a.fee_type = #{feeSet.feeType}
+			</if>
+			<if test="beginBackDate != null and endBackDate != null and beginBackDate != '' and endBackDate != ''">
+				AND a.back_date BETWEEN #{beginBackDate} AND #{endBackDate}
+			</if>
+			<if test="responseProfessorName != null and responseProfessorName != ''">
+				AND a.response_professor_name LIKE 
+					<if test="dbName == 'oracle'">'%'||#{responseProfessorName}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{responseProfessorName}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{responseProfessorName},'%')</if>
+			</if>
+			<if test="patientNo != null and patientNo != ''">
+				AND a.patient_no LIKE 
+					<if test="dbName == 'oracle'">'%'||#{patientNo}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{patientNo}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{patientNo},'%')</if>
+			</if>
+			<if test="patientName != null and patientName != ''">
+				AND a.patient_name LIKE 
+					<if test="dbName == 'oracle'">'%'||#{patientName}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{patientName}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{patientName},'%')</if>
+			</if>
+			${sqlMap.dsf}
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="Records">
+		SELECT 
+			<include refid="recordsColumns"/>
+		FROM records a
+		<include refid="recordsJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO records(
+			id,
+			fee_type,
+			apply_date,
+			back_date,
+			request_hospital,
+			request_professor_name,
+			response_hospital,
+			response_professor_name,
+			treatment_no,
+			patient_no,
+			patient_name,
+			sex,
+			patient_age,
+			check_content,
+			advice,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag,
+			hospital_fee,
+			scale
+		) VALUES (
+			#{id},
+			#{feeSet.feeType},
+			#{applyDate},
+			#{backDate},
+			#{requestHospitalNo},
+			#{requestProfessorName},
+			#{responseHospitalNo},
+			#{responseProfessorName},
+			#{treatmentNo},
+			#{patientNo},
+			#{patientName},
+			#{sex},
+			#{patientAge},
+			#{checkContent},
+			#{advice},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag},
+			#{feeSet.hospitalFee},
+			#{feeSet.scale}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE records SET 	
+			fee_type = #{feeSet.feeType},
+			apply_date = #{applyDate},
+			back_date = #{backDate},
+			request_hospital = #{requestHospital.hospitalNo},
+			request_professor_name = #{requestProfessorName},
+			response_hospital = #{responseHospital.hospitalNo},
+			response_professor_name = #{responseProfessorName},
+			treatment_no = #{treatmentNo},
+			patient_no = #{patientNo},
+			patient_name = #{patientName},
+			sex = #{sex},
+			patient_age = #{patientAge},
+			check_content = #{checkContent},
+			advice = #{advice}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE records SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	<!-- 自定义sql -->
+	<select id="findListForLine" resultType="com.thinkgem.jeesite.modules.records.entity.TotalRecords">
+		SELECT tem.date,sum(tem.crCount) AS "crCount",sum(tem.ctCount) AS "ctCount",sum(tem.njCount) "njCount",
+				sum(tem.mrCount) AS "mrCount",sum(tem.mgCount) AS "mgCount",sum(tem.bcCount) AS "bcCount",sum(tem.xdCount) AS "xdCount"
+		FROM
+		(SELECT mid.rdate AS "date",(CASE WHEN mid.fee_type = '1' THEN mid.count ELSE 0 END) AS "crCount",
+			 (CASE WHEN mid.fee_type = '2' THEN mid.count ELSE 0 END) AS "ctCount",
+			 (CASE WHEN mid.fee_type = '3' THEN mid.count ELSE 0 END) AS "njCount",
+			 (CASE WHEN mid.fee_type = '4' THEN mid.count ELSE 0 END) AS "mrCount",
+			 (CASE WHEN mid.fee_type = '5' THEN mid.count ELSE 0 END) AS "mgCount",
+       (CASE WHEN mid.fee_type = '6' THEN mid.count ELSE 0 END) AS "bcCount",
+       (CASE WHEN mid.fee_type = '7' THEN mid.count ELSE 0 END) AS "xdCount"
+		FROM
+		(SELECT 
+			<include refid="myColumns"/>
+		FROM records a
+		<include refid="recordsJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="requestHospital != null and requestHospital.id != null and requestHospital.id != ''">
+				<if test='moneyInOut == "0"'> 
+					AND (reqh.id = #{requestHospital.id} OR resph.id = #{requestHospital.id})
+				</if> 			
+				<!-- 收入 -->
+				<if test='moneyInOut == "1"'>
+					AND resph.id = #{requestHospital.id}
+				</if>
+				<!-- 支出 -->
+				<if test='moneyInOut == "2"'>
+					AND reqh.id = #{requestHospital.id}
+				</if>
+			</if>
+			<if test="feeSet != null and feeSet.feeType != null and feeSet.feeType != ''">
+				AND a.fee_type = #{feeSet.feeType}
+			</if>
+			<if test="beginBackDate != null and endBackDate != null and beginBackDate != '' and endBackDate != ''">
+				AND a.back_date BETWEEN #{beginBackDate} AND #{endBackDate}
+			</if>
+			<if test="responseProfessorName != null and responseProfessorName != ''">
+				AND a.response_professor_name LIKE 
+					<if test="dbName == 'oracle'">'%'||#{responseProfessorName}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{responseProfessorName}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{responseProfessorName},'%')</if>
+			</if>
+			<if test="patientNo != null and patientNo != ''">
+				AND a.patient_no LIKE 
+					<if test="dbName == 'oracle'">'%'||#{patientNo}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{patientNo}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{patientNo},'%')</if>
+			</if>
+			<if test="patientName != null and patientName != ''">
+				AND a.patient_name LIKE 
+					<if test="dbName == 'oracle'">'%'||#{patientName}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{patientName}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{patientName},'%')</if>
+			</if>
+			${sqlMap.dsf}
+			GROUP BY rdate,fee_type
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY rdate,fee_type ASC
+			</otherwise>
+		</choose>) AS mid) AS tem GROUP BY tem.date
+	</select>
+</mapper>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.feeset.dao.FeeSetDao">
+    
+	<sql id="feeSetColumns">
+		a.id AS "id",
+		a.hospital_id AS "hospitalId",
+		a.fee_type AS "feeType",
+		a.hospital_fee AS "hospitalFee",
+		a.scale AS "scale",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag",
+		h.id AS "hospital.id",
+		h.hospital_name AS "hospital.hospitalName"
+	</sql>
+	
+	<sql id="feeSetJoins">
+		LEFT JOIN hospital h ON a.hospital_id = h.id
+	</sql>
+    
+	<select id="get" resultType="FeeSet">
+		SELECT 
+			<include refid="feeSetColumns"/>
+		FROM fee_set a
+		<include refid="feeSetJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="FeeSet">
+		SELECT 
+			<include refid="feeSetColumns"/>
+		FROM fee_set a
+		<include refid="feeSetJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="hospitalId != null and hospitalId != ''">
+				AND a.hospital_id = #{hospitalId} 
+					
+			</if>
+			<if test="feeType != null and feeType != ''">
+				AND a.fee_type = #{feeType}
+			</if>
+		</where>
+		<!-- 数据权限过滤 -->
+		${sqlMap.dsf}
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY h.hospital_name,a.fee_type ASC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="FeeSet">
+		SELECT 
+			<include refid="feeSetColumns"/>
+		FROM fee_set a
+		<include refid="feeSetJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO fee_set(
+			id,
+			hospital_id,
+			fee_type,
+			hospital_fee,
+			scale,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag
+		) VALUES (
+			#{id},
+			#{hospitalId},
+			#{feeType},
+			#{hospitalFee},
+			#{scale},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE fee_set SET 	
+			hospital_id = #{hospitalId},
+			fee_type = #{feeType},
+			hospital_fee = #{hospitalFee},
+			scale = #{scale},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE fee_set SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	<select id="getOne" resultType="FeeSet">
+		SELECT 
+			<include refid="feeSetColumns"/>
+		FROM fee_set a
+		<include refid="feeSetJoins"/>
+		WHERE a.del_flag = #{DEL_FLAG_NORMAL} AND a.fee_type = #{feeType} AND a.hospital_id = #{hospitalId}
+	</select>
+	
+</mapper>

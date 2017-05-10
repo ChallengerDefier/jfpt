@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.thinkgem.jeesite.modules.hospital.dao.HospitalDao">
+    
+	<sql id="hospitalColumns">
+		a.id AS "id",
+		a.hospital_name AS "hospitalName",
+		a.address AS "address",
+		a.hospital_no AS "hospitalNo",
+		a.level AS "level",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag"
+	</sql>
+	
+	<sql id="hospitalJoins">
+	</sql>
+    
+	<select id="get" resultType="Hospital">
+		SELECT 
+			<include refid="hospitalColumns"/>
+		FROM hospital a
+		<include refid="hospitalJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="Hospital">
+		SELECT 
+			<include refid="hospitalColumns"/>
+		FROM hospital a
+		<include refid="hospitalJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="hospitalName != null and hospitalName != ''">
+				AND a.hospital_name LIKE 
+					<if test="dbName == 'oracle'">'%'||#{hospitalName}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{hospitalName}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{hospitalName},'%')</if>
+			</if>
+			<if test="hospitalNo != null and hospitalNo != ''">
+				AND a.hospital_no = #{hospitalNo}
+			</if>
+			<if test="level != null and level != ''">
+				AND a.level = #{level}
+			</if>
+		</where>
+		<!-- 数据范围过滤 -->
+		${sqlMap.dsf}
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="Hospital">
+		SELECT 
+			<include refid="hospitalColumns"/>
+		FROM hospital a
+		<include refid="hospitalJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO hospital(
+			id,
+			hospital_name,
+			address,
+			hospital_no,
+			level,
+			create_by,
+			create_date,
+			update_by,
+			update_date,
+			remarks,
+			del_flag
+		) VALUES (
+			#{id},
+			#{hospitalName},
+			#{address},
+			#{hospitalNo},
+			#{level},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate},
+			#{remarks},
+			#{delFlag}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE hospital SET 	
+			hospital_name = #{hospitalName},
+			address = #{address},
+			hospital_no = #{hospitalNo},
+			level = #{level},
+			remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+	
+	<update id="delete">
+		UPDATE hospital SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	<!-- 自定义sql -->
+	<select id="findAll" resultType="Hospital">
+		SELECT 
+			a.id AS "id",
+			a.hospital_name AS "hospitalName",
+			a.hospital_no AS "hospitalNo"
+		FROM hospital a
+		<include refid="hospitalJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>
+		<!--  数据权限过滤-->
+		${sqlMap.dsf}		
+		ORDER BY a.create_date ASC
+	</select>
+	
+	<select id="getHospitalByNo" resultType="Hospital">
+		SELECT 
+			<include refid="hospitalColumns"/>
+		FROM hospital a
+		<include refid="hospitalJoins"/>
+		WHERE a.del_flag = #{DEL_FLAG_NORMAL}
+			AND a.hospital_no = #{hospitalNo}
+	</select>
+	
+	<select id="getHospitalByName" resultType="Hospital">
+		SELECT 
+			<include refid="hospitalColumns"/>
+		FROM hospital a
+		<include refid="hospitalJoins"/>
+		WHERE a.del_flag = #{DEL_FLAG_NORMAL}
+			AND a.hospital_name = #{hospitalName}
+	</select>
+</mapper>
